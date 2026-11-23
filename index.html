@@ -1,0 +1,425 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>每日打卡月曆</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
+<style>
+/* Layout: one narrow column. Month title with navigation, a quick stamp button for today, a quiet stats row, then the month grid where every date carries its own circle. */
+:root {
+  --bg: #F3F4F7;
+  --surface: #FFFFFF;
+  --ink: #1C2230;
+  --ink-soft: #5C6478;
+  --line: #D6D9E2;
+  --accent: #C23B2E;
+  --accent-tint: #FBE9E6;
+  --on-accent: #FFFFFF;
+  --font-display: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
+  --font-body: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151C;
+    --surface: #1B2029;
+    --ink: #E9ECF3;
+    --ink-soft: #9AA3B5;
+    --line: #323A4A;
+    --accent: #EE7468;
+    --accent-tint: #3A2224;
+    --on-accent: #1B2029;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151C;
+  --surface: #1B2029;
+  --ink: #E9ECF3;
+  --ink-soft: #9AA3B5;
+  --line: #323A4A;
+  --accent: #EE7468;
+  --accent-tint: #3A2224;
+  --on-accent: #1B2029;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-block: 28px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+.wrap { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+
+.eyebrow { margin: 0 0 4px; font-size: .8125rem; letter-spacing: .14em; color: var(--ink-soft); }
+.head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 7vw, 2.25rem);
+  line-height: 1.15;
+  text-wrap: balance;
+  font-variant-numeric: tabular-nums;
+}
+.nav { display: flex; gap: 8px; }
+.icon-btn, .pill {
+  height: 40px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-btn { width: 40px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
+.icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pill { padding: 0 14px; border-radius: 999px; font-size: .875rem; }
+.icon-btn:hover, .pill:hover { border-color: var(--ink-soft); }
+
+.goal { display: flex; flex-direction: column; gap: 6px; }
+.goal label { font-size: .8125rem; letter-spacing: .06em; color: var(--ink-soft); }
+.goal input {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.goal input::placeholder { color: var(--ink-soft); opacity: .8; }
+
+.today {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.today[aria-pressed="true"] { background: var(--accent-tint); color: var(--accent); }
+.today .t-main { display: block; font-weight: 700; }
+.today .t-sub { display: block; font-size: .8125rem; opacity: .9; }
+.today svg { flex: none; width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.today[aria-pressed="false"] svg { opacity: .55; }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.stat { display: flex; flex-direction: column; gap: 2px; padding-left: 14px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { padding-left: 0; border-left: 0; }
+.stat .label { font-size: .75rem; letter-spacing: .08em; color: var(--ink-soft); }
+.stat .val { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stat .val b { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.2; }
+.stat .val span { font-size: .8125rem; color: var(--ink-soft); }
+
+.cal { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 8px 14px; }
+.week, .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.week span { text-align: center; font-size: .75rem; color: var(--ink-soft); padding-bottom: 10px; }
+.grid { row-gap: 10px; }
+.day { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.num {
+  min-width: 24px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: .8125rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.is-today .num { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.is-future .num { opacity: .55; }
+
+.ring {
+  position: relative;
+  width: min(100%, 42px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: border-color .15s, background-color .15s;
+}
+.ring svg { width: 58%; height: 58%; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.ring:hover:not(:disabled) { border-color: var(--ink-soft); }
+.is-today .ring { border-color: var(--accent); }
+.is-done .ring { border-color: var(--accent); background: var(--accent-tint); transform: rotate(var(--tilt, 0deg)); }
+.is-done .ring::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; border: 1px solid var(--accent); opacity: .55; }
+.is-done .ring svg { opacity: 1; }
+.ring:disabled { cursor: default; }
+.is-future .ring { border-style: dashed; opacity: .5; }
+.is-past:not(.is-done) .ring { opacity: .55; }
+.pop .ring { animation: stamp .32s ease-out; }
+@keyframes stamp {
+  0% { transform: scale(1.4) rotate(var(--tilt, 0deg)); opacity: .3; }
+  65% { transform: scale(.92) rotate(var(--tilt, 0deg)); opacity: 1; }
+  100% { transform: scale(1) rotate(var(--tilt, 0deg)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pop .ring { animation: none; }
+  .ring { transition: none; }
+}
+
+.note { margin: 0; font-size: .8125rem; color: var(--ink-soft); }
+</style>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">每日打卡</p>
+    <div class="head">
+      <h1 id="monthTitle"></h1>
+      <div class="nav">
+        <button class="icon-btn" id="prev" type="button" aria-label="上個月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="pill" id="goNow" type="button" hidden>回到本月</button>
+        <button class="icon-btn" id="next" type="button" aria-label="下個月"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="goal">
+    <label for="goal">每天要做的一件事</label>
+    <input id="goal" type="text" maxlength="80" placeholder="例如：寫 10 分鐘日記" autocomplete="off">
+  </div>
+
+  <button class="today" id="todayBtn" type="button" aria-pressed="false">
+    <span>
+      <span class="t-main" id="todayMain"></span>
+      <span class="t-sub" id="todaySub"></span>
+    </span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+  </button>
+
+  <section class="stats" aria-label="打卡統計">
+    <div class="stat"><span class="label">本月</span><span class="val"><b id="statMonth">0</b><span id="statMonthOf"></span></span></div>
+    <div class="stat"><span class="label">連續</span><span class="val"><b id="statStreak">0</b><span> 天</span></span></div>
+    <div class="stat"><span class="label">累計</span><span class="val"><b id="statTotal">0</b><span> 天</span></span></div>
+  </section>
+
+  <section class="cal" aria-label="月曆">
+    <div class="week" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <p class="note">只有今天可以打勾或取消。過去和還沒到的日子都已鎖住，過了午夜就不能再改。</p>
+  <p class="note" id="status" aria-live="polite"></p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var WEEK = '日一二三四五六';
+  var LS_KEY = 'daily-checkin-v1';
+  var STATUS_TEXT = {
+    ok: '紀錄已儲存在你的帳號，換手機或電腦也看得到。',
+    local: '目前只儲存在這個瀏覽器，清除網站資料後紀錄會消失。',
+    slow: '暫時連不上雲端，先顯示這台裝置上的紀錄。',
+    fail: '雲端儲存失敗，紀錄先留在這台裝置上。'
+  };
+
+  var now = new Date();
+  var TY = now.getFullYear(), TM = now.getMonth(), TD = now.getDate();
+  var state = { done: {}, goal: '' };
+  var view = { y: TY, m: TM };
+  var popKey = null;
+
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function keyOf(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+  var todayKey = keyOf(TY, TM, TD);
+  function refreshToday() {
+    now = new Date();
+    TY = now.getFullYear(); TM = now.getMonth(); TD = now.getDate();
+    todayKey = keyOf(TY, TM, TD);
+  }
+
+  var grid = $('grid'), goalEl = $('goal'), todayBtn = $('todayBtn');
+
+  function clean(d) {
+    var out = { done: {}, goal: '' };
+    if (d && typeof d === 'object') {
+      if (d.done && typeof d.done === 'object') {
+        Object.keys(d.done).forEach(function (k) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(k) && d.done[k] === true) out.done[k] = true;
+        });
+      }
+      if (typeof d.goal === 'string') out.goal = d.goal.slice(0, 80);
+    }
+    return out;
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (raw) state = clean(JSON.parse(raw));
+    } catch (e) {}
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function setStatus(kind) { $('status').textContent = STATUS_TEXT[kind] || ''; }
+
+  /* ---------- cloud sync (db capability, private per viewer) ---------- */
+  var docRef = null, ready = false, chain = Promise.resolve(), goalTimer = 0;
+
+  function persist() {
+    saveLocal();
+    if (!docRef || !ready) return;
+    chain = chain.then(function () {
+      return docRef.set({ done: Object.assign({}, state.done), goal: state.goal });
+    }).catch(function () { setStatus('fail'); });
+  }
+
+  function initCloud() {
+    if (!window.claude || typeof window.claude.use !== 'function') { setStatus('local'); return; }
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+      var db = r[0], user = r[1];
+      if (!db || !user) { setStatus('local'); return; }
+      return user.id().then(function (id) {
+        if (!id) { setStatus('local'); return; }
+        docRef = db.collection('data/users/' + id).doc('checks');
+        var timer = setTimeout(function () { setStatus('slow'); }, 10000);
+        docRef.onSnapshot(function (snap) {
+          if (snap.metadata.hasPendingWrites || snap.metadata.fromCache) return;
+          clearTimeout(timer);
+          var wasReady = ready;
+          ready = true;
+          if (snap.exists) {
+            state = clean(snap.data());
+            saveLocal();
+            if (document.activeElement !== goalEl) goalEl.value = state.goal;
+            render();
+          } else if (!wasReady && (Object.keys(state.done).length || state.goal)) {
+            persist();
+          }
+          setStatus('ok');
+        }, function () { clearTimeout(timer); setStatus('local'); });
+      });
+    }).catch(function () { setStatus('local'); });
+  }
+
+  /* ---------- stats ---------- */
+  function streak() {
+    var n = 0, i = state.done[todayKey] ? 0 : 1;
+    for (; i < 5000; i++) {
+      var dt = new Date(TY, TM, TD - i);
+      if (state.done[keyOf(dt.getFullYear(), dt.getMonth(), dt.getDate())]) n++;
+      else break;
+    }
+    return n;
+  }
+
+  /* ---------- render ---------- */
+  function render() {
+    refreshToday();
+    var y = view.y, m = view.m;
+    var first = new Date(y, m, 1).getDay();
+    var dim = new Date(y, m + 1, 0).getDate();
+    var isCurrent = (y === TY && m === TM);
+    var isPastMonth = (y * 12 + m) < (TY * 12 + TM);
+
+    $('monthTitle').textContent = y + ' 年 ' + (m + 1) + ' 月';
+    $('goNow').hidden = isCurrent;
+
+    grid.textContent = '';
+    for (var i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+
+    for (var d = 1; d <= dim; d++) {
+      var k = keyOf(y, m, d);
+      var done = state.done[k] === true;
+      var future = isCurrent ? d > TD : !isPastMonth;
+      var isToday = isCurrent && d === TD;
+      var past = !future && !isToday;
+
+      var cell = document.createElement('div');
+      cell.className = 'day' + (done ? ' is-done' : '') + (future ? ' is-future' : '') + (past ? ' is-past' : '') + (isToday ? ' is-today' : '') + (popKey === k ? ' pop' : '');
+      cell.style.setProperty('--tilt', (((d * 37) % 7) - 3) + 'deg');
+
+      var num = document.createElement('span');
+      num.className = 'num';
+      num.textContent = d;
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ring';
+      btn.setAttribute('data-key', k);
+      btn.setAttribute('aria-pressed', done ? 'true' : 'false');
+      btn.setAttribute('aria-label', (m + 1) + ' 月 ' + d + ' 日' + (done ? '，已完成' : (future ? '，還沒到' : '，未完成')) + (past ? '，已鎖定' : ''));
+      btn.disabled = !isToday;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+      cell.appendChild(num);
+      cell.appendChild(btn);
+      grid.appendChild(cell);
+    }
+    popKey = null;
+
+    var prefix = y + '-' + pad(m + 1) + '-';
+    var keys = Object.keys(state.done);
+    var inMonth = keys.filter(function (k) { return k.indexOf(prefix) === 0; }).length;
+    var elapsed = isCurrent ? TD : (isPastMonth ? dim : 0);
+    $('statMonth').textContent = inMonth;
+    $('statMonthOf').textContent = ' / ' + elapsed + ' 天';
+    $('statStreak').textContent = streak();
+    $('statTotal').textContent = keys.length;
+
+    var doneToday = state.done[todayKey] === true;
+    todayBtn.setAttribute('aria-pressed', doneToday ? 'true' : 'false');
+    $('todayMain').textContent = doneToday ? '今天已完成' : '完成今天的一件事';
+    $('todaySub').textContent = (TM + 1) + ' 月 ' + TD + ' 日 週' + WEEK.charAt(now.getDay()) + (doneToday ? '，再點一次可取消' : '');
+  }
+
+  function toggle(k) {
+    refreshToday();
+    if (k !== todayKey) { render(); return; }
+    if (state.done[k]) delete state.done[k];
+    else { state.done[k] = true; popKey = k; }
+    persist();
+    render();
+  }
+
+  /* ---------- events ---------- */
+  grid.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-key]') : null;
+    if (btn && !btn.disabled) toggle(btn.getAttribute('data-key'));
+  });
+  todayBtn.addEventListener('click', function () { toggle(todayKey); });
+
+  function shift(delta) {
+    var dt = new Date(view.y, view.m + delta, 1);
+    view.y = dt.getFullYear();
+    view.m = dt.getMonth();
+    render();
+  }
+  $('prev').addEventListener('click', function () { shift(-1); });
+  $('next').addEventListener('click', function () { shift(1); });
+  $('goNow').addEventListener('click', function () { view.y = TY; view.m = TM; render(); });
+
+  goalEl.addEventListener('input', function () {
+    state.goal = goalEl.value.slice(0, 80);
+    saveLocal();
+    clearTimeout(goalTimer);
+    goalTimer = setTimeout(persist, 700);
+  });
+
+  loadLocal();
+  goalEl.value = state.goal;
+  render();
+  initCloud();
+})();
+</script>
+
+</body></html>
